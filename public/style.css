@@ -1,18 +1,35 @@
 body {
     cursor: auto;
     cursor: url(cursor.png);
+    font-family: sans-serif;
+    color: white;
 }
 
 div#game {
     background-color: deepskyblue;
-    width: 600px;
-    height: 375px;
+    width: 960px;
+    height: 600px;
+    transform: scale(1);
     cursor: none;
-    -webkit-transition: background-color 3000ms linear;
-    -moz-transition: background-color 3000ms linear;
-    -o-transition: background-color 3000ms linear;
-    -ms-transition: background-color 3000ms linear;
-    transition: background-color 3000ms linear;
+    -webkit-transition: background-color 1000ms linear;
+    -moz-transition: background-color 1000ms linear;
+    -o-transition: background-color 1000ms linear;
+    -ms-transition: background-color 1000ms linear;
+    transition: background-color 1000ms linear;
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    transform-origin: top left;
+}
+
+div#info {
+    -webkit-transition: opacity 500ms linear;
+    -moz-transition: opacity 500ms linear;
+    -o-transition: opacity 500ms linear;
+    -ms-transition: opacity 500ms linear;
+    transition: opacity 500ms linear;
+    text-align: center;
+    padding-top: 15%;
 }
 
 div.player {

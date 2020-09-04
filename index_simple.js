@@ -2,21 +2,9 @@ var express = require('express');
 var app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
-const MongoClient = require('mongodb').MongoClient;
 
 var rooms = {}; //maintains current state for rooms
 var rooms_history = {}; //maintains historical state for point calculation
-var room_score = {}; //keeps track of the total score for each room
-
-const url = 'mongodb://localhost:27017';
-const dbName = 'synchromouse';
-var mongoClient = null;
-MongoClient.connect(url, function(err, client) {
-    mongoClient = client;
-    console.log("Connected to database");
-});
-  
-
 
 app.use(express.static('public'));
 
@@ -29,62 +17,16 @@ io.on('connection', (socket) => {
         if(!(room in rooms)) {
             rooms[room] = {};
             rooms_history[room] = {};
-            room_score[room] = 0;
         }
         rooms[room][socket.id] = {x: 0, y: 0, rotation: 0};
         rooms_history[room][socket.id] = [];
         socket.to(room).emit('location', socket.id, 0, 0, 0);
-    });
-    socket.on('join_admin', (room) => {
-        console.log(socket.id + ' wants to join ' + room + ' as admin');
-        socket.join(room);
-    });
-    socket.on('start', (room) => {
-        console.log('game begins in room ' + room);
-        room_score[room] = 0;
-        io.to(room).emit('end', room_score[room], false);
-        setTimeout(() => {
-            room_score[room] = 0;
-            io.to(room).emit('start');
-            if (mongoClient !== null) {
-                const db = mongoClient.db(dbName);
-                db.collection('round_begin').insert({time: new Date(), room: room});
-            }
-        }, 10000);
-        var times = 0;
-        var interval = setInterval(() => {
-            if (mongoClient !== null) {
-                const db = mongoClient.db(dbName);
-                db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room]});
-            }
-            io.to(room).emit('end', room_score[room], false);
-            setTimeout(() => {
-                room_score[room] = 0;
-                io.to(room).emit('start');
-                if (mongoClient !== null) {
-                    const db = mongoClient.db(dbName);
-                    db.collection('round_begin').insert({time: new Date(), room: room});
-                }
-            }, 10000);
-            times++;
-            if(times > 2) { //amount of rounds
-                clearInterval(interval);
-                setTimeout(() => {
-                    io.to(room).emit('end', room_score[room], true);
-                    if (mongoClient !== null) {
-                        const db = mongoClient.db(dbName);
-                        db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room]});
-                    }
-                }, 25000);
-            }
-        }, 25000);
     });
     socket.on('location', (room, x, y, rotation) => {
         socket.to(room).emit('location', socket.id, x, y, rotation);
         if(!(room in rooms)) {
             rooms[room] = {};
             rooms_history[room] = {};
-            room_score[room] = 0;
         }
         if(!(socket.id in rooms[room])) {
             rooms[room][socket.id] = {x: 0, y: 0, rotation: 0};
@@ -92,11 +34,6 @@ io.on('connection', (socket) => {
         }
         rooms_history[room][socket.id].push({x: x, y: y, rotation: rotation});
         rooms[room][socket.id] = {x: x, y: y, rotation: rotation};
-
-        if(mongoClient !== null) {
-            const db = mongoClient.db(dbName);
-            db.collection('locations').insert({time: new Date(), room: room, socketId: socket.id, x: x, y: y, rotation: rotation});
-        }
     });
     socket.on('disconnect', () => {
         console.log(socket.id + " disconnected");
@@ -118,9 +55,7 @@ setInterval(() => {
         var mean_x = [];
         var mean_y = [];
         var mean_rot = [];
-        var n_players = 0;
         for(p in room) {
-            n_players++;
             var player = room[p];
             var distance = 0;
             var prev_location = null;
@@ -162,10 +97,10 @@ setInterval(() => {
             }
         }
         
-        score = n_players * min_distance / (0.01 + max_location_diff);
+        score = min_distance / (0.01 + max_location_diff);
         if(max_rot_diff > 90) score = 0;
         io.to(r).emit('score', score);
-        room_score[r] += score;
+
     }
 }, 100);
 

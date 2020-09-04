@@ -3,13 +3,19 @@
         <title>SynchroMouse</title>
         <link rel="stylesheet" type="text/css" href="style.css">
     </head>
-    <body>
+    <body onload = "init()">
         <div class="wrapper">
             <div id="game">
                 <div id="cursor"></div>
+                <div id="info">
+                    <p>Previous score: <span id="previous_score"></span></p>
+                    <p>High score: <span id="high_score"></span></p>
+                    <p>Next round begins in <span id="time">X</span> seconds</p>
+                </div>
             </div>
         </div>
     </body>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="url-search-params.js"></script>
     <script src="script.js"></script>
 </html>
