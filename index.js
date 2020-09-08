@@ -10,7 +10,7 @@ var room_score = {}; //keeps track of the total score for each room
 
 const url = 'mongodb://localhost:27017';
 const dbName = 'synchromouse';
-var mongoClient = null;
+var mongoClient = undefined;
 MongoClient.connect(url, function(err, client) {
     mongoClient = client;
     console.log("Connected to database");
@@ -46,14 +46,14 @@ io.on('connection', (socket) => {
         setTimeout(() => {
             room_score[room] = 0;
             io.to(room).emit('start');
-            if (mongoClient !== null) {
+            if (mongoClient !== undefined) {
                 const db = mongoClient.db(dbName);
                 db.collection('round_begin').insert({time: new Date(), room: room});
             }
         }, 10000);
         var times = 0;
         var interval = setInterval(() => {
-            if (mongoClient !== null) {
+            if (mongoClient !== undefined) {
                 const db = mongoClient.db(dbName);
                 db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room]});
             }
@@ -61,7 +61,7 @@ io.on('connection', (socket) => {
             setTimeout(() => {
                 room_score[room] = 0;
                 io.to(room).emit('start');
-                if (mongoClient !== null) {
+                if (mongoClient !== undefined) {
                     const db = mongoClient.db(dbName);
                     db.collection('round_begin').insert({time: new Date(), room: room});
                 }
@@ -71,7 +71,7 @@ io.on('connection', (socket) => {
                 clearInterval(interval);
                 setTimeout(() => {
                     io.to(room).emit('end', room_score[room], true);
-                    if (mongoClient !== null) {
+                    if (mongoClient !== undefined) {
                         const db = mongoClient.db(dbName);
                         db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room]});
                     }
@@ -93,7 +93,7 @@ io.on('connection', (socket) => {
         rooms_history[room][socket.id].push({x: x, y: y, rotation: rotation});
         rooms[room][socket.id] = {x: x, y: y, rotation: rotation};
 
-        if(mongoClient !== null) {
+        if(mongoClient !== undefined) {
             const db = mongoClient.db(dbName);
             db.collection('locations').insert({time: new Date(), room: room, socketId: socket.id, x: x, y: y, rotation: rotation});
         }
