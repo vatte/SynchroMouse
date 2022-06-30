@@ -4,14 +4,26 @@ var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 const MongoClient = require('mongodb').MongoClient;
 
+const port = process.env.PORT || 3000
+
 var rooms = {}; //maintains current state for rooms
 var rooms_history = {}; //maintains historical state for point calculation
 var room_score = {}; //keeps track of the total score for each room
 
 const url = 'mongodb://localhost:27017';
+const uri = "mongodb+srv://gonzad5:Warcraft3dan@cluster0.qbahja0.mongodb.net/?retryWrites=true&w=majority";
 const dbName = 'synchromouse';
 var mongoClient = undefined;
-MongoClient.connect(url, function(err, client) {
+// MongoClient.connect(url, function(err, client) {
+//     mongoClient = client;
+//     console.log("Connected to database");
+// });
+
+MongoClient.connect(uri, {useNewUrlParser: true}, function(err, client) {
+
+    if (err) {
+        return console.log('Unable to connect to database')
+    }
     mongoClient = client;
     console.log("Connected to database");
 });
@@ -169,6 +181,6 @@ setInterval(() => {
     }
 }, 100);
 
-http.listen(3000, function(){
-  console.log('listening on *:3000');
+http.listen(port, function(){
+  console.log(`listening on: ${port}`);
 });
