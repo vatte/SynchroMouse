@@ -11,11 +11,13 @@ var init = function() {
     var scaleFactor = 1.0;
 
     socket.on('begin', function() {
+        //Parsing the value of the room.
         var urlParams = new URLSearchParams(window.location.search);
 
         if(urlParams.has('room')) {
             room = urlParams.get('room');
-
+            // Possibility of removing given new configuration.
+            // Is the user entering an admin or a player.
             if(urlParams.has('admin')) {
                 admin = true;
                 socket.emit('join_admin', room);
@@ -34,6 +36,7 @@ var init = function() {
                 socket.emit('join_room', room);
             }
         }
+        // Tutorial page.
         if(urlParams.has('playground')) {
             document.getElementById('info').style.opacity = '0';
 
@@ -50,9 +53,11 @@ var init = function() {
     });
 
     socket.on('location', function(socketId, x, y, rot) {
+        // Identify the player based on the id that is placed on the socket.
         var player = document.getElementById(socketId);
         x *= game.offsetWidth;
         y *= game.offsetHeight;
+        // Initization of the player.
         if(player === null) {
             player = document.createElement('div');
             player.classList.add('player');
@@ -67,7 +72,7 @@ var init = function() {
     socket.on('disconnected', function(socketId) {
         game.removeChild(document.getElementById(socketId));
     });
-
+    // Change the background depending on the score of the players.
     socket.on('score', function(score) {
         score = Math.min(1, score);
         var blue = 255 * (1 - score);
@@ -75,16 +80,21 @@ var init = function() {
         var red = 255 * score;
         game.style.backgroundColor = 'rgb(' + red + ',' + green + ',' + blue + ')';
     });
-
+    // Initial style opacity.
     socket.on('start', function() {
         console.log('start');
         document.getElementById('info').style.opacity = '0';
     });
+    // Process when the game ends.
     socket.on('end', function(score, finish) {
         document.getElementById('info').style.opacity = 1;
+        // Setup the current score.
         if(score > hiscore) hiscore = score;
         document.getElementById('previous_score').innerHTML = '' + Math.round(score);
         document.getElementById('high_score').innerHTML = '' + Math.round(hiscore);
+        // Setup of the end of the game.
+
+        // Setup to change the time to "X".
         if(finish) {
             document.getElementById('time').innerHTML = 'X';
         }
@@ -102,7 +112,7 @@ var init = function() {
             }, 1000);
         }
     });
-
+    // Movement of the cursor definition.
     game.onmousemove = function(evt) {
         if(!admin) {
             //var x = evt.pageX - game.offsetLeft;
