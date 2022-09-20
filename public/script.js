@@ -1,6 +1,68 @@
 
+function toggleScreen(id, toggle) {
+    let element = document.getElementById(id)
+    let display = (toggle) ? 'block': 'none'
+    element.style.display = display
+}
+
+function startDemo() {
+    toggleScreen('start-screen', false)
+    toggleScreen('demo', true)
+    demoGame()
+}
+
+function getMousePos(canvas, event) {
+    let mouseX = event.pageX - canvas.offsetLeft
+    let mouseY = event.pageY - canvas.offsetTop
+    return {
+        x: mouseX,
+        y: mouseY
+    }
+}
+
+
+
+function demoGame() {
+    const canvas=document.getElementById('canvas-demo')
+    const ctx = canvas.getContext('2d')
+
+    canvas.width = 1024
+    canvas.height = 576
+
+    function findObjectCoords(mouseEvent) {
+        let obj = document.getElementById("canvas-demo");
+        let obj_left = 0;
+        let obj_top = 0;
+        let xpos;
+        let ypos;
+        // let speed = 0.8
+    
+        while (obj.offsetParent) {
+          obj_left += obj.offsetLeft;
+          obj_top += obj.offsetTop;
+          obj = obj.offsetParent;
+        }
+        if (mouseEvent) {
+          //FireFox
+          xpos = mouseEvent.pageX;
+          ypos = mouseEvent.pageY;
+        } else {
+          //IE
+          xpos = window.event.x + document.body.scrollLeft - 2;
+          ypos = window.event.y + document.body.scrollTop - 2;
+        }
+        xpos -= obj_left;
+        ypos -= obj_top;
+
+        document.getElementById()
+
+}
+}
+
+
 
 // ====================SYNCHROMOUSE CODE BEFORE=============================================
+
 var init = function() {
     var socket = io();
     var room = '';
