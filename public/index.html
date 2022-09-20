@@ -3,7 +3,36 @@
         <title>SynchroMouse</title>
         <link rel="stylesheet" type="text/css" href="style.css">
     </head>
-    <body onload = "init()">
+
+
+    <body>
+        <div id="start-screen" class="screen" style="display: block;">
+            <button onclick="startGameDescription">Begin</button>
+        </div>
+
+        <div id="general-instructions" class="screen" style="display: none;">
+            <h1>General Game Instructions</h1>
+            <p>Welcome to this experiment. Today you are going to play the Mirror Game. The Mirror Game is an improvisation game
+                where the objective is for participants to synchronize between each other while creating a variety of movements.
+                The movements simulate dancing and the game is meant to be played using creative movements that are done making new
+                movements that use different trajectories within the game area.
+            </p>
+            <p>You will play this game with another participant. There will be a score linked to the use of the space, how much time you synchronize in your team and the average distance
+                between your teammate and you.
+            </p>
+        </div>
+
+        <div id="demo" class="screen" style="display: none;">
+            <h1>Synchromouse Experiment</h1>
+            <h2 id="Competence">Competence Version:</h2>
+            <h2 id="Predictability">Predictability Version</h2>
+            <canvas id="canvas-demo" style="cursor: none;"></canvas>
+        </div>
+
+        <div id="experiment" class="screen" style="display: none;">
+            <canvas id="canvas-game" style="cursor: none;"></canvas>
+        </div>
+
         <div class="wrapper">
             <div id="game">
                 <div id="cursor"></div>

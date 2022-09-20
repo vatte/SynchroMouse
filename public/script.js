@@ -1,3 +1,6 @@
+
+
+// ====================SYNCHROMOUSE CODE BEFORE=============================================
 var init = function() {
     var socket = io();
     var room = '';
