@@ -79,3 +79,84 @@ div#cursor {
     height: 32px;
     background-image: url(cursor_white.png);
 }
+
+
+.btn-group button {
+    background-color: #04AA6D; /* Green background */
+    border: 1px solid green; /* Green border */
+    color: white; /* White text */
+    padding: 10px 24px; /* Some padding */
+    cursor: pointer; /* Pointer/hand icon */
+    width: 50%; /* Set a width if needed */
+    display: block; /* Make the buttons appear below each other */
+    align-items: center;
+  }
+  
+  .btn-group button:not(:last-child) {
+    border-bottom: none; /* Prevent double borders */
+  }
+  
+  /* Add a background color on hover */
+  .btn-group button:hover {
+    background-color: #3e8e41;
+  }
+  /* Add styles necessary for game menu */
+  .container {
+    position: relative;
+    width: 600px;
+    padding: 24px;
+    margin: 30px auto;
+    border-radius: 25px;
+  }
+
+  .container .input-box-wrapper {
+    position: relative;
+  }
+
+  .input-box-wrapper .box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    border: 1px solid #26262c;
+    border-bottom: 0;
+    padding: 14px 10px;
+  }
+
+  .input-box-wrapper .box label {
+    padding: 20px;
+    cursor: pointer;
+    display: block;
+  }
+  .input-box-wrapper .box .optionMenu {
+    position: relative;
+    width: 22 px;
+    height: 22px;
+    cursor: pointer;
+  }
+
+  #submitGameMode {
+    background-color: #046daa; /* Green background */
+    border: 1px solid rgb(0, 34, 128); /* Green border */
+    color: white; /* White text */
+    padding: 10px 24px; /* Some padding */
+    cursor: pointer; /* Pointer/hand icon */
+    width: 50%; /* Set a width if needed */
+    display: block; /* Make the buttons appear below each other */
+    align-items: center;
+  }
+
+.left {
+  width: 50%;
+}
+    
+.right {
+  width: 50%;
+}
+.row:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+.column {
+  float: left;
+}

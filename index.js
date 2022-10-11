@@ -2,18 +2,60 @@ var express = require('express');
 var app = express();
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
+const fs = require('fs')
 const MongoClient = require('mongodb').MongoClient;
+const curveMatcher = require("curve-matcher")
+// const paper = require("paper")
+const smoothCurve = require("chaikin-smooth")
+// const {makeid} = require('./utils')
+let playPositions = []
+let playPositionsPrev = []
+let playPositionsUtil = []
+let agentWavesPositionsUtil = []
+let agentIdealPositionsUtil
+
+
+let agePositions = []
+let agePositions2 = []
+
+let rotDifferencesWaveAgent = []
+let rotDifferencesIdealAgent = []
+let rotDifferencesPlayer = []
+
+let velocityAgentWaves = []
+let velocityAgentIdeal = []
+let velocityPlayer = []
+
+let amountSharpTurnsWaves
+let amountSharpTurnsIdeal
+let amountSharpTurnsPlayer
+
+let prevAgePositions = []
+let prevAgePositions2 = []
+let prevPlayPositions = []
+let roundBeginning = false
+let totalGameTime = 30000
+// let playing = false
+let playerPositionsTest = []
+let agentPositionsTest = []
+let agent2PositionsTest= []
+let data = {resultsAgent1: [], resultsAgent2: []}
 
 const port = process.env.PORT || 3000
 
-var rooms = {}; //maintains current state for rooms
-var rooms_history = {}; //maintains historical state for point calculation
-var room_score = {}; //keeps track of the total score for each room
+const rooms = {}; //maintains current state for rooms
+const rooms_history = {}; //maintains historical state for point calculation
+const room_score = {}; //keeps track of the total score for each room
+
+let arrayTest = []
 
 // Experiment Scores
 let room_predictability = {}
 let room_integrity = {}
 let room_competence = {}
+
+let smoothFinal = []
+let smoothAgentFinal = []
 
 const url = 'mongodb://localhost:27017';
 // const uri = "mongodb+srv://gonzad5:Warcraft3dan@cluster0.qbahja0.mongodb.net/?retryWrites=true&w=majority";
@@ -41,7 +83,8 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('a user connected');
     // Emits the begin event.
-    socket.emit('begin');
+     socket.emit('begin');
+
 
     // Opens connection when 
     socket.on('join_room', (room) => {
@@ -55,7 +98,7 @@ io.on('connection', (socket) => {
             room_score[room] = 0;
             // Measurements for each of the rooms.
             room_predictability[room] = 0
-            room_integrity[room] = 0
+            // room_integrity[room] = 0
             room_competence[room] = 0
         }
         // Introduction of the initial position for the player with their rooms list and history.
@@ -72,26 +115,28 @@ io.on('connection', (socket) => {
         socket.join(room);
     });
 
-
+    // let roundTime = 30000
     // When the game begins.
     socket.on('start', (room) => {
         console.log('game begins in room ' + room);
         room_score[room] = 0;
         // Initialization of scores.
         room_predictability[room] = 0
-        room_integrity[room] = 0
+        // room_integrity[room] = 0
         room_competence[room] = 0
         // Return to the initial state.
-        io.to(room).emit('end', room_score[room], false);
+        socket.emit('end', false);
 
         setTimeout(() => {
             room_score[room] = 0;
             // Initialization of scores.
             room_predictability[room] = 0
-            room_integrity[room] = 0
+            // room_integrity[room] = 0
             room_competence[room] = 0
             //Emit start when the countdown ends.
-            io.to(room).emit('start');
+            roundBeginning=true
+            socket.emit('beginGame', roundBeginning)
+            socket.to(room).emit('start');
             if (mongoClient !== undefined) {
                 const db = mongoClient.db(dbName);
                 db.collection('round_begin').insert({time: new Date(), room: room});
@@ -106,45 +151,353 @@ io.on('connection', (socket) => {
                 db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room],
                     competence: room_competence[room], predictability: room_predictability[room], integrity: room_integrity[room]});
             }
-
-            io.to(room).emit('end', room_score[room], false);
+            roundBeginning = false
+            socket.emit('beginGame', roundBeginning)
+            socket.emit('end', false);
             setTimeout(() => {
                 room_score[room] = 0;
                 // Finalization of scores.
                 room_predictability[room] = 0
-                room_integrity[room] = 0
+                // room_integrity[room] = 0
                 room_competence[room] = 0
-                io.to(room).emit('start');
+                // playPositions = []
+                // agePositions = []
+                roundBeginning=true
+                socket.emit('beginGame', roundBeginning)
+                socket.emit('start');
                 if (mongoClient !== undefined) {
                     const db = mongoClient.db(dbName);
                     db.collection('round_begin').insert({time: new Date(), room: room});
                 }
             }, 10000);
             times++;
+            
+        //     let counterTimeTotal = 0
+        //     setInterval(() => {
+        //         console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+        //         console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+        //         counterTimeTotal ++
+        //         console.log("The amount of messages is: " + counterTimeTotal)
+        //         // room_competence[room] = curveMatcher.shapeSimilarity(agePositions,playPositions)
+        //         playPositions = []
+        //         agePositions = []
+        //     // console.log(playPositionsPrev)
+        //     // console.log(playPositions)
+           
+        //      // console.log(agePositions)
+        //  }, 1000);
+            console.log("Times are: " + times)
             if(times > 2) { //amount of rounds
                 clearInterval(interval);
                 setTimeout(() => {
-                    io.to(room).emit('end', room_score[room], true);
+                    roundBeginning = false
+                    socket.emit('beginGame', roundBeginning)
+                    socket.emit('end', true);
+                    console.log("We entered the end.")
+                    // let data = JSON.stringify(scores)
+                    let finalData = JSON.stringify(data)
+                    // let textFile = 'scores'+ room + '.json'
+                    let textFilePlayer = 'scores_'+ socket.id + '.json'
+                    fs.writeFile(textFilePlayer, finalData, err => {
+                    if (err) {
+                        throw err
+                    } else {
+                        console.log('successful upload')
+                    }
+                        console.log('JSON data is saved.')
+                    })
+                    // let textFile
                     if (mongoClient !== undefined) {
                         const db = mongoClient.db(dbName);
                         db.collection('room_scores').insert({time: new Date(), room: room, score: room_score[room],
                             competence: room_competence[room], predictability: room_predictability[room], integrity: room_integrity[room]});
                     }
-                }, 25000);
+                }, totalGameTime);
             }
-        }, 25000);
+        }, totalGameTime);
+
+        let counterTimeTotal = 0
+        // setInterval(() => {
+            // console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+            // console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+            // counterTimeTotal ++
+            // console.log("The amount of messages is: " + counterTimeTotal)
+            // playPositions = []
+            // agePositions = []
+           // console.log(playPositionsPrev)
+           // console.log(playPositions)
+           
+           // console.log(agePositions)
+       // }, 1000);
+
+
     });
 
     // Definition of the location socket.
-    socket.on('location', (room, x, y, rotation) => {
-        socket.to(room).emit('location', socket.id, x, y, rotation);
+
+    socket.on('locationAgent', (room, x, y, a2x, a2y, rotDifWav, rotDifIdeal, velocityWaves, velocityIdeal) => {
+        if (roundBeginning) {
+            socket.to(room).emit('location', socket.id, x, y)
+            agePositions.push({x: x, y: y})
+            agePositions2.push({x: a2x, y: a2y})
+            agentPositionsTest.push([x, y])
+            rotDifferencesWaveAgent.push(rotDifWav)
+            if (Math.abs(rotDifWav) >= 90) {
+                amountSharpTurnsWaves ++
+            }
+            rotDifferencesIdealAgent.push(rotDifIdeal)
+            if (Math.abs(rotDifIdeal) >= 90) {
+                amountSharpTurnsIdeal ++
+            }
+            
+            velocityAgentWaves.push(velocityWaves)
+            velocityAgentIdeal.push(velocityIdeal)
+
+        }
+    })
+
+    socket.on('calculateMeasures', (room) => {
+        
+        if (roundBeginning) {
+
+            // let pathTest = new paper.Path({
+            //     segments: playPositions
+            // })
+            let averageDistance= []
+            let smooth = smoothCurve(playerPositionsTest)
+            let smooth2 = smoothCurve(agentPositionsTest)
+            // console.log(smooth[10])
+            // console.log(playPositions[10])
+
+            // for (let i = 0; i < smooth.length-1; i++) {
+            //     averageDistance.push([playerPositionsTest[i][0]-smooth[i][0], playerPositionsTest[i][1]-smooth[i][1]])
+            // }
+            // console.log(averageDistance)
+            console.log(`The length of the playerPositions is: ${playerPositionsTest.length} and the smooth curve is: ${smooth.length} `)
+            // console.log(smooth)
+            if (!isNaN(playerPositionsTest)) {
+                
+                // console.log(playerPositionsTest[10][0]- smooth[10][0])
+                // console.log(`Player Test position: ${playerPositionsTest[10][0]} and smooth curve: ${smooth[10][0]}`)
+            }
+
+            for (let index = 0; index < smooth.length-1; index++) {
+                smoothFinal.push({x: smooth[index][0], y: smooth[index][1]})
+            }
+
+            for (let index = 0; index < smooth2.length-1; index++) {
+                smoothAgentFinal.push({x: smooth2[index][0], y: smooth2[index][1]})
+                
+            }
+
+            // console.log(`First element of smooth: ${smooth[0]} versus ${smooth[0][0]} and ${smooth[0][1]}`)
+            // console.log(`The difference with first element is: ${playerPositionsTest[10]-playPositions[10]}`)
+            let balancedCurved1 =curveMatcher.subdivideCurve(agePositions, {numPoints: 50})
+            let balancedCurved11 = curveMatcher.subdivideCurve(agePositions2, {numPoints: 50})
+
+            let balancedCurved2 =curveMatcher.subdivideCurve(playPositions, {numPoints: 50})
+
+            let normalizedCurve1 = curveMatcher.procrustesNormalizeCurve(balancedCurved1)
+            let normalizedCurve11 = curveMatcher.procrustesNormalizeCurve(balancedCurved11)
+
+            let normalizedCurve2 = curveMatcher.procrustesNormalizeCurve(balancedCurved2)
+
+            let dist = curveMatcher.frechetDistance(normalizedCurve1, normalizedCurve2)
+            let dist2 = curveMatcher.frechetDistance(normalizedCurve11, normalizedCurve2)
+            
+            let curveLen1 = curveMatcher.curveLength(normalizedCurve1)
+            let curveLen11 = curveMatcher.curveLength(normalizedCurve11)
+
+            let curveLen2 = curveMatcher.curveLength(normalizedCurve2)
+
+            let maxCurveLen = Math.max(curveLen1, curveLen2)
+            let maxCurveLen2 = Math.max(curveLen11, curveLen2)
+
+            let similarityNoRot = 1 - dist/ maxCurveLen
+            let similarityNoRot2 = 1 - dist2/ maxCurveLen2
+
+            let similarity = curveMatcher.shapeSimilarity(agePositions,playPositions)
+            let similarity2 = curveMatcher.shapeSimilarity(agePositions2,playPositions)
+
+            let distance = curveMatcher.frechetDistance(agePositions, playPositions)
+            let distance2 = curveMatcher.frechetDistance(agePositions2, playPositions)
+
+            if (isNaN(similarity)) {
+                similarity = 1
+            }
+
+
+            let balancedCurve1Sm = curveMatcher.subdivideCurve(playPositions, { numPoints: 50 });
+            let balancedCurve2Sm = curveMatcher.subdivideCurve(smoothFinal, { numPoints: 50 });
+
+            let normalizedCurve1Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve1Sm);
+            let normalizedCurve2Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve2Sm);
+
+            let distSm = curveMatcher.frechetDistance(normalizedCurve1Sm, normalizedCurve2Sm);
+
+            let curveLen1Sm = curveMatcher.curveLength(normalizedCurve1Sm)
+            let curveLen2Sm = curveMatcher.curveLength(normalizedCurve2Sm)
+            let maxCurveLenSm = Math.max(curveLen1Sm, curveLen2Sm);
+
+            // similarity == 1 means the curves have identical shapes
+            const similaritySm = 1 - distSm / maxCurveLenSm;
+
+            // console.log(`The similarity without rotation is: ${similaritySm} and the distance is: ${distSm}`)
+
+            let similaritySmooth = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
+            // console.log(similaritySmooth)
+            if (isNaN(similaritySmooth)) {
+                similaritySmooth = 1
+                console.log("Entered NAN")
+            }
+
+            let similaritySmoothAgent = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
+            // console.log(similaritySmoothAgent)
+            if (isNaN(similaritySmoothAgent)) {
+                similaritySmoothAgent = 1
+                console.log("Entered NAN")
+            }
+
+            // Measure of Sharp Turns Players and Agents
+
+            let competenceSmoothPlayer =  amountSharpTurnsPlayer / rotDifferencesPlayer.length
+            let competenceSmoothWaveAgent = amountSharpTurnsWaves / rotDifferencesWaveAgent.length
+            let competenceSmoothnessIdeal = amountSharpTurnsIdeal / rotDifferencesIdealAgent.length
+            
+
+            let predPerson
+            let predAgent
+            let predAgent2
+
+            if (prevPlayPositions.length !== 0 && prevAgePositions.length !== 0) {
+                predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
+                predAgent = curveMatcher.shapeSimilarity(prevAgePositions, agePositions)
+           } else {
+               predPerson = 1
+               predAgent = 1
+           }
+
+           if (prevPlayPositions.length !== 0 && prevAgePositions2.length !== 0) {
+                // predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
+                predAgent2 = curveMatcher.shapeSimilarity(prevAgePositions2, agePositions2)
+            } else {
+                // predPerson = 1
+                predAgent2 = 1
+            }
+
+           if (isNaN(predPerson)) {
+                predPerson = 1
+           }
+
+           if (isNaN(predAgent)) {
+                predAgent = 1
+           }
+
+           if (isNaN(predAgent2)) {
+                predAgent2 = 1
+           }
+
+        //    console.log(`The similarity is: ${similarity} and the distance is: ${distance}`)
+            //console.log(smooth)
+            // console.log(`The similarity with the smooth curve is: ${similaritySmooth} and agent is: ${similaritySmoothAgent}`)
+           socket.emit('scoresSimilar', similarity.toFixed(3) , distance.toFixed(3), predPerson.toFixed(3), predAgent.toFixed(3), similarityNoRot.toFixed(3), dist.toFixed(3))
+           
+           console.log(`The amount of sharp turns for the player is: ${amountSharpTurnsPlayer}, for the wave agent: ${amountSharpTurnsWaves} and the ideal agent: ${amountSharpTurnsIdeal}`)
+           console.log(`The competence in smoothness of the player is: ${competenceSmoothPlayer.toFixed(3)}, for the wave agent: ${competenceSmoothWaveAgent.toFixed(3)} and the ideal agent: ${competenceSmoothnessIdeal.toFixed(3)}`)
+           // WRITE THE JSON FILE
+           let scores = {
+            time: new Date(), 
+            room: room,
+            // score: room_score[room],
+            shapeSimilarityNormRot: similarity.toFixed(3),
+            shapeSimilarityNoRot: similarityNoRot.toFixed(3),
+            predictabilityHuman: predPerson.toFixed(3),
+            predictabilityAgent: predAgent.toFixed(3),
+            competenceSmoothness: competenceSmoothPlayer.toFixed(3),
+            competenceSmoothnessWaves: competenceSmoothWaveAgent.toFixed(3)
+
+           }
+
+           let scores2 = {
+            time: new Date(),
+            room: room,
+            shapeSimilarityNormRot: similarity2.toFixed(3),
+            shapeSImilarityNoRot: similarityNoRot2.toFixed(3),
+            // predictabilityHuman: predPerson.toFixed(3),
+            predictabilityAgent: predAgent2.toFixed(3),
+            competenceSmoothnessIdeal: competenceSmoothnessIdeal.toFixed(3)
+           }
+
+
+           data.resultsAgent1.push(scores)
+           data.resultsAgent2.push(scores2)
+
+           prevPlayPositions = playPositions
+        
+           prevAgePositions = agePositions
+           prevAgePositions2 = agePositions2
+
+           playPositions = []
+           rotDifferencesIdealAgent = []
+           rotDifferencesPlayer = []
+           rotDifferencesWaveAgent = []
+
+           velocityAgentIdeal = []
+           velocityAgentWaves = []
+           velocityPlayer = []
+           
+           agePositions = []
+           agePositions2 = []
+
+           playerPositionsTest = []
+           smoothFinal = []
+           smooth = []
+           smooth2 = []
+           smoothAgentFinal = []
+           amountSharpTurnsIdeal = 0
+           amountSharpTurnsWaves = 0
+           amountSharpTurnsPlayer = 0
+        }
+        
+    })
+
+    // setInterval(() => {
+    //     // console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+    //     // console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+    //     // counterTimeTotal ++
+    //     // console.log("The amount of messages is: " + counterTimeTotal)
+    //     socket.to(room).emit('scoresSimilar', room, curveMatcher.shapeSimilarity(agePositions,playPositions), curveMatcher.frechetDistance(agePositions, playPositions) )
+    //     playPositions = []
+    //     agePositions = []
+    //    // console.log(playPositionsPrev)
+    //    // console.log(playPositions)
+       
+    //    // console.log(agePositions)
+    // }, 1000);
+
+    socket.on('location', (room, x, y, rotation, rotationDifference, velocityPlay) => {
+        io.to(room).emit('location', socket.id, x, y, rotation);
+        // console.log("The position in x is: " + x)
+        // console.log(`The registered position in x: ${x} and Position in Y: ${y}`)
+        
+        if (roundBeginning) {
+            playPositions.push({x: x, y: y})
+            playerPositionsTest.push([x, y])
+            arrayTest.push({x: x*Math.random(), y: y* Math.random()})
+            rotDifferencesPlayer.push(rotationDifference)
+            velocityPlayer.push(velocityPlay)
+            if (Math.abs(rotationDifference) >= 90) {
+                amountSharpTurnsPlayer ++
+            }
+        }
+       
         if(!(room in rooms)) {
             rooms[room] = {};
             rooms_history[room] = {};
             room_score[room] = 0;
             // Initialization of scores.
             room_predictability[room] = 0
-            room_integrity[room] = 0
+            // room_integrity[room] = 0
             room_competence[room] = 0
         }
         if(!(socket.id in rooms[room])) {
@@ -163,10 +516,11 @@ io.on('connection', (socket) => {
 
     socket.on('disconnect', () => {
         console.log(socket.id + " disconnected");
+        roundBeginning = false 
         for(room in rooms) {
             if(socket.id in rooms[room]) {
-                delete(rooms[room][socket.id]);
-                delete(rooms_history[room][socket.id]);
+                delete(rooms[room]);
+                delete(rooms_history[room]);
                 io.to(room).emit('disconnected', socket.id);
             }
         }
@@ -177,7 +531,33 @@ io.on('connection', (socket) => {
 let registerTime = 100
 //Calculation of points in a set period of time.
 //calculate points every 100 ms
+// setInterval(() => {
+//      console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+//      console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+//      // playPositions = []
+//      // agePositions = []
+//     // console.log(playPositionsPrev)
+//     // console.log(playPositions)
+    
+//     // console.log(agePositions)
+// }, 10000);
+
+// setInterval(() => {
+//     // console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+//     // console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+//     // counterTimeTotal ++
+//     // console.log("The amount of messages is: " + counterTimeTotal)
+//     io.to(room).emit('scoresSimilar', curveMatcher.shapeSimilarity(agePositions,playPositions), curveMatcher.frechetDistance(agePositions, playPositions) )
+//     playPositions = []
+//     agePositions = []
+//    // console.log(playPositionsPrev)
+//    // console.log(playPositions)
+   
+//    // console.log(agePositions)
+// }, 1000);
 setInterval(() => {
+    // console.log(playPositions)
+    // playPositionsPrev = playPositions
     for(r in rooms_history) {
         var room = rooms_history[r];
         var min_distance = 999999;
@@ -247,7 +627,8 @@ setInterval(() => {
             }
         }
         
-        score = n_players * min_distance / (0.01 + max_location_diff);
+        score = min_distance / (0.01 + max_location_diff);
+        // console.log(score)
         if(max_rot_diff > 90) score = 0;
         io.to(r).emit('score', score);
         room_score[r] += score;

@@ -7,8 +7,97 @@
 
     <body>
         <div id="start-screen" class="screen" style="display: block;">
-            <button onclick="startGameDescription">Begin</button>
+            <button id="main-menu-button">Begin</button>
         </div>
+
+        <div id="mode-screen" class="screen" style="display: none;">
+            <h1>Please choose the game mode you want to play.</h1>
+            <!-- <div class="btn-group">
+                <button id="main-demo-button">Perfect Follower</button>
+                <button>Competent And Predictable</button>
+                <button>Competent And Unpredictable</button>
+                <button onclick="startDemoICP()">Incompetent And Predictable</button>
+                <button onclick="startDemoICUP()">Incompetent And UnPredictable</button>
+            </div> -->
+            <div class="container">
+                <div class="input-box-wrapper">
+                    <form id="form">
+                    <div class="box">
+                        <label for="speedOpt">Level of Speed</label>
+                        <select name="spdOpt" id="spdOptions" class="optionMenu">
+                            <option value="None">None</option>
+                            <!-- <option value="low">Low</option>
+                            <option value="high">High</option> -->
+                        </select>
+                    </div>
+                    <div class="box">
+                        <label for="competenceOpt">Level of Agent Competence</label>
+                        <select name="competenceOpt" id="competenceOptions" class="optionMenu">
+                            <option value="none">None</option>
+                            <option value="low">Low</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="box">
+                        <label for="predictabilityOpt">Level of Agent Predictability</label>
+                        <select name="predictabilityOpt" id="predictabilityOptions" class="optionMenu">
+                            <option value="none">None</option>
+                            <option value="low">Low</option>
+                            <option value="high">High</option>
+                        </select>
+                    </div>
+                    <div class="box">
+                        <label for="competenceMeasure">Measurement of Competence</label>
+                        <select name="competenceMeasure" id="measureCompetence" class="optionMenu">
+                            <option value="version1">Frechet Distance</option>
+                            <!-- <option value="low">Low</option>
+                            <option value="high">High</option> -->
+                        </select>
+                    </div>
+                    <div class="box">
+                        <label for="predictability">Measurement of Predictability</label>
+                        <select name="predictabilityMeasure" id="measurePredictability" class="optionMenu">
+                            <option value="version1">Frechet Distance</option>
+                            <!-- <option value="low">Low</option>
+                            <option value="high">High</option> -->
+                        </select>
+                    </div>
+                    <br><br>
+                    <input type="submit" value="Submit" id="submitGameMode">
+                </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- <div id="mode-screen" class="screen" style="display: none;">
+            <h1>Please choose the game mode you want to play.</h1>
+            <div class="form-version">
+                <form>
+                <input type="checkbox" name="perfect_mode" id="perfect_mode">
+                <label for="perfect_mode">Perfect Mode</label>
+                <input type="checkbox" name="competence_v1_high_mode" id="competence_v1_high_mode">
+                <label for="competence_v1_high_mode">Activate High Competence Version 1</label>
+                <input type="checkbox" name="competence_v1_low_mode" id="competence_v1_low_mode">
+                <label for="competence_v1_low_mode">Activate Low Competence Version 1</label>
+                <input type="checkbox" name="competence_v2_high_mode" id="competence_v2_high_mode">
+                <label for="competence_v2_high_mode">Activate High Competence Version 2</label>
+                <input type="checkbox" name="competence_v2_low_mode" id="competence_v2_low_mode">
+                <label for="competence_v2_low_mode">Activate Low Competence Version 2</label>
+                <input type="checkbox" name="predictability_v1_high_mode" id="predictability_v1_high_mode">
+                <label for="predictability_v1_high_mode">Activate High Predictability Version 1</label>
+                <input type="checkbox" name="predictability_v1_low_mode" id="predictability_v1_low_mode">
+                <label for="predictability_v1_low_mode">Activate Low Predictability Version 1</label>
+                <input type="checkbox" name="predictability_v2_high_mode" id="predictability_v2_high_mode">
+                <label for="predictability_v2_high_mode">Activate High Predictability Version 2</label>
+                <input type="checkbox" name="predictability_v2_low_mode" id="predictability_v2_low_mode">
+                <label for="predictability_v2_low_mode">Activate Low Predictability Version 2</label>
+                <input type="submit" value="Submit">
+                </form>
+            </div>
+        </div> -->
+
+
+
 
         <div id="general-instructions" class="screen" style="display: none;">
             <h1>General Game Instructions</h1>
@@ -23,16 +112,38 @@
         </div>
 
         <div id="demo" class="screen" style="display: none;">
-            <h1>Synchromouse Experiment</h1>
-            <h2 id="Competence">Competence Version:</h2>
-            <h2 id="Predictability">Predictability Version</h2>
-            <canvas id="canvas-demo" style="cursor: none;"></canvas>
+            <div class="wrapper">
+                <h1>Synchromouse Experiment</h1>
+                <div class="row">
+                    <div class="column left">
+                        <h3 class="column" id="similarityMeasure">Similarity Measure:</h3>
+                    </div>
+                    <div class="column right">
+                        <h3 id="similarNoRotMeasure">Similarity No Rotation Measure:</h3>
+                    </div>    
+                </div>
+                
+                <div class="row">
+                    <h3 id="distanceMeasure">Distance Measure:</h3>
+                </div>
+                
+                <div class="row">
+                    <p class="column left">Next round begins in <span id="time">X</span> seconds</p>
+                    <p class="column right">Time remaining: <span id="timeRemaining">X</span> seconds</p>
+                </div>
+                <!-- <p id="modeRef">The agent is: </p> -->
+                <button id="startNow">START</button>
+                <button id="goBack">BACK</button>
+                <h2 id="objectCoords-HAT">ObjCoord:</h2>
+                <canvas id="canvas-demo" style="cursor: none;"></canvas>
+            </div>
+            <!--<button>Back</button>-->
         </div>
 
         <div id="experiment" class="screen" style="display: none;">
             <canvas id="canvas-game" style="cursor: none;"></canvas>
         </div>
-
+<!--
         <div class="wrapper">
             <div id="game">
                 <div id="cursor"></div>
@@ -42,9 +153,12 @@
                     <p>Next round begins in <span id="time">X</span> seconds</p>
                 </div>
             </div>
-        </div>
+        </div>-->
     </body>
     <script src="/socket.io/socket.io.js"></script>
     <script src="url-search-params.js"></script>
-    <script src="script.js"></script>
+    <script src='http://joeiddon.github.io/perlin/perlin.js'></script>
+    <script src="Classes.js"></script>
+    <script src="Functions.js"></script>
+    <script src="script.js" type="module"></script>
 </html>
