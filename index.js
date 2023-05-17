@@ -9,37 +9,54 @@ const curveMatcher = require("curve-matcher")
 const smoothCurve = require("chaikin-smooth")
 // const {makeid} = require('./utils')
 let playPositions = []
-let playPositionsPrev = []
-let playPositionsUtil = []
-let agentWavesPositionsUtil = []
-let agentIdealPositionsUtil
-
+let speedXPlayer = []
+let speedYPlayer = []
+let accelXPlayer = []
+let accelYPlayer = []
+let jerkXPlayer = []
+let jerkYPlayer = []
 
 let agePositions = []
+let accelXAgent = []
+let accelYAgent = []
+// Competence Measurements
+let speedXAgent = []
+let speedYAgent = []
+let jerkXAgent = []
+let jerkYAgent = []
+let rotationPlayer = []
+
+
+
+
+// Predictability Measurements
+let rotationAgent = []
+let curvatureAgent = []
+let curvaturePlayer  = []
 let agePositions2 = []
 
-let rotDifferencesWaveAgent = []
-let rotDifferencesIdealAgent = []
+// let rotDifferencesWaveAgent = []
+// let rotDifferencesIdealAgent = []
 let rotDifferencesPlayer = []
 
-let velocityAgentWaves = []
-let velocityAgentIdeal = []
-let velocityPlayer = []
+// let velocityAgentWaves = []
+// let velocityAgent = []
+// let velocityPlayer = []
 
-let amountSharpTurnsWaves
-let amountSharpTurnsIdeal
-let amountSharpTurnsPlayer
+let amountSharpTurnsAgent
+let amountSharpTurnsPlayer = 0
 
-let prevAgePositions = []
-let prevAgePositions2 = []
-let prevPlayPositions = []
+// let prevAgePositions = []
+// let prevAgePositions2 = []
+// let prevPlayPositions = []
 let roundBeginning = false
 let totalGameTime = 30000
 // let playing = false
-let playerPositionsTest = []
-let agentPositionsTest = []
-let agent2PositionsTest= []
-let data = {resultsAgent1: [], resultsAgent2: []}
+// let playerPositionsTest = []
+// let agentPositionsTest = []
+// let agent2PositionsTest= []
+let dataPlayer = []
+let dataAgent = []
 
 const port = process.env.PORT || 3000
 
@@ -54,8 +71,8 @@ let room_predictability = {}
 let room_integrity = {}
 let room_competence = {}
 
-let smoothFinal = []
-let smoothAgentFinal = []
+// let smoothFinal = []
+// let smoothAgentFinal = []
 
 const url = 'mongodb://localhost:27017';
 // const uri = "mongodb+srv://gonzad5:Warcraft3dan@cluster0.qbahja0.mongodb.net/?retryWrites=true&w=majority";
@@ -195,17 +212,33 @@ io.on('connection', (socket) => {
                     socket.emit('end', true);
                     console.log("We entered the end.")
                     // let data = JSON.stringify(scores)
-                    let finalData = JSON.stringify(data)
+                    let finalDataPlayer = JSON.stringify(dataPlayer)
                     // let textFile = 'scores'+ room + '.json'
-                    let textFilePlayer = 'scores_'+ socket.id + '.json'
-                    fs.writeFile(textFilePlayer, finalData, err => {
+                    let textFilePlayer = 'scores_player_'+ socket.id + '.json'
+                    fs.writeFile(textFilePlayer, finalDataPlayer, err => {
                     if (err) {
                         throw err
                     } else {
                         console.log('successful upload')
                     }
-                        console.log('JSON data is saved.')
+                        console.log('JSON data player is saved.')
                     })
+
+                    let finalDataAgent = JSON.stringify(dataAgent)
+                    // let textFile = 'scores'+ room + '.json'
+                    let textFileAgent = 'scores_agent_'+ socket.id + '.json'
+                    fs.writeFile(textFileAgent, finalDataAgent, err => {
+                    if (err) {
+                        throw err
+                    } else {
+                        console.log('successful upload')
+                    }
+                        console.log('JSON data agent is saved.')
+                    })
+
+
+
+
                     // let textFile
                     if (mongoClient !== undefined) {
                         const db = mongoClient.db(dbName);
@@ -235,261 +268,58 @@ io.on('connection', (socket) => {
 
     // Definition of the location socket.
 
-    socket.on('locationAgent', (room, x, y, a2x, a2y, rotDifWav, rotDifIdeal, velocityWaves, velocityIdeal) => {
+    socket.on('locationAgent', (room, x, y, rotation, speedX, speedY, accelX, accelY, jerkX, jerkY) => {
         if (roundBeginning) {
             socket.to(room).emit('location', socket.id, x, y)
+            // Positions data structure
+            curvatureAgent.push(Math.abs((speedX * accelY) - (accelX * speedY)) / (((speedX ** 2) + (speedY ** 2)) ** (3/2)))
             agePositions.push({x: x, y: y})
-            agePositions2.push({x: a2x, y: a2y})
-            agentPositionsTest.push([x, y])
-            rotDifferencesWaveAgent.push(rotDifWav)
-            if (Math.abs(rotDifWav) >= 90) {
-                amountSharpTurnsWaves ++
-            }
-            rotDifferencesIdealAgent.push(rotDifIdeal)
-            if (Math.abs(rotDifIdeal) >= 90) {
-                amountSharpTurnsIdeal ++
+            speedXAgent.push(speedX)
+            speedYAgent.push(speedY)
+            accelXAgent.push(accelX)
+            accelYAgent.push(accelY)
+            jerkXAgent.push(jerkX)
+            jerkYAgent.push(jerkY)
+            // Rotation data structure
+            rotationAgent.push(rotation)
+            if (Math.abs(rotation) >= 90) {
+                amountSharpTurnsAgent ++
             }
             
-            velocityAgentWaves.push(velocityWaves)
-            velocityAgentIdeal.push(velocityIdeal)
+            
 
         }
     })
 
-    socket.on('calculateMeasures', (room) => {
-        
-        if (roundBeginning) {
-
-            // let pathTest = new paper.Path({
-            //     segments: playPositions
-            // })
-            let averageDistance= []
-            let smooth = smoothCurve(playerPositionsTest)
-            let smooth2 = smoothCurve(agentPositionsTest)
-            // console.log(smooth[10])
-            // console.log(playPositions[10])
-
-            // for (let i = 0; i < smooth.length-1; i++) {
-            //     averageDistance.push([playerPositionsTest[i][0]-smooth[i][0], playerPositionsTest[i][1]-smooth[i][1]])
-            // }
-            // console.log(averageDistance)
-            console.log(`The length of the playerPositions is: ${playerPositionsTest.length} and the smooth curve is: ${smooth.length} `)
-            // console.log(smooth)
-            if (!isNaN(playerPositionsTest)) {
-                
-                // console.log(playerPositionsTest[10][0]- smooth[10][0])
-                // console.log(`Player Test position: ${playerPositionsTest[10][0]} and smooth curve: ${smooth[10][0]}`)
-            }
-
-            for (let index = 0; index < smooth.length-1; index++) {
-                smoothFinal.push({x: smooth[index][0], y: smooth[index][1]})
-            }
-
-            for (let index = 0; index < smooth2.length-1; index++) {
-                smoothAgentFinal.push({x: smooth2[index][0], y: smooth2[index][1]})
-                
-            }
-
-            // console.log(`First element of smooth: ${smooth[0]} versus ${smooth[0][0]} and ${smooth[0][1]}`)
-            // console.log(`The difference with first element is: ${playerPositionsTest[10]-playPositions[10]}`)
-            let balancedCurved1 =curveMatcher.subdivideCurve(agePositions, {numPoints: 50})
-            let balancedCurved11 = curveMatcher.subdivideCurve(agePositions2, {numPoints: 50})
-
-            let balancedCurved2 =curveMatcher.subdivideCurve(playPositions, {numPoints: 50})
-
-            let normalizedCurve1 = curveMatcher.procrustesNormalizeCurve(balancedCurved1)
-            let normalizedCurve11 = curveMatcher.procrustesNormalizeCurve(balancedCurved11)
-
-            let normalizedCurve2 = curveMatcher.procrustesNormalizeCurve(balancedCurved2)
-
-            let dist = curveMatcher.frechetDistance(normalizedCurve1, normalizedCurve2)
-            let dist2 = curveMatcher.frechetDistance(normalizedCurve11, normalizedCurve2)
-            
-            let curveLen1 = curveMatcher.curveLength(normalizedCurve1)
-            let curveLen11 = curveMatcher.curveLength(normalizedCurve11)
-
-            let curveLen2 = curveMatcher.curveLength(normalizedCurve2)
-
-            let maxCurveLen = Math.max(curveLen1, curveLen2)
-            let maxCurveLen2 = Math.max(curveLen11, curveLen2)
-
-            let similarityNoRot = 1 - dist/ maxCurveLen
-            let similarityNoRot2 = 1 - dist2/ maxCurveLen2
-
-            let similarity = curveMatcher.shapeSimilarity(agePositions,playPositions)
-            let similarity2 = curveMatcher.shapeSimilarity(agePositions2,playPositions)
-
-            let distance = curveMatcher.frechetDistance(agePositions, playPositions)
-            let distance2 = curveMatcher.frechetDistance(agePositions2, playPositions)
-
-            if (isNaN(similarity)) {
-                similarity = 1
-            }
-
-
-            let balancedCurve1Sm = curveMatcher.subdivideCurve(playPositions, { numPoints: 50 });
-            let balancedCurve2Sm = curveMatcher.subdivideCurve(smoothFinal, { numPoints: 50 });
-
-            let normalizedCurve1Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve1Sm);
-            let normalizedCurve2Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve2Sm);
-
-            let distSm = curveMatcher.frechetDistance(normalizedCurve1Sm, normalizedCurve2Sm);
-
-            let curveLen1Sm = curveMatcher.curveLength(normalizedCurve1Sm)
-            let curveLen2Sm = curveMatcher.curveLength(normalizedCurve2Sm)
-            let maxCurveLenSm = Math.max(curveLen1Sm, curveLen2Sm);
-
-            // similarity == 1 means the curves have identical shapes
-            const similaritySm = 1 - distSm / maxCurveLenSm;
-
-            // console.log(`The similarity without rotation is: ${similaritySm} and the distance is: ${distSm}`)
-
-            let similaritySmooth = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
-            // console.log(similaritySmooth)
-            if (isNaN(similaritySmooth)) {
-                similaritySmooth = 1
-                console.log("Entered NAN")
-            }
-
-            let similaritySmoothAgent = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
-            // console.log(similaritySmoothAgent)
-            if (isNaN(similaritySmoothAgent)) {
-                similaritySmoothAgent = 1
-                console.log("Entered NAN")
-            }
-
-            // Measure of Sharp Turns Players and Agents
-
-            let competenceSmoothPlayer =  amountSharpTurnsPlayer / rotDifferencesPlayer.length
-            let competenceSmoothWaveAgent = amountSharpTurnsWaves / rotDifferencesWaveAgent.length
-            let competenceSmoothnessIdeal = amountSharpTurnsIdeal / rotDifferencesIdealAgent.length
-            
-
-            let predPerson
-            let predAgent
-            let predAgent2
-
-            if (prevPlayPositions.length !== 0 && prevAgePositions.length !== 0) {
-                predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
-                predAgent = curveMatcher.shapeSimilarity(prevAgePositions, agePositions)
-           } else {
-               predPerson = 1
-               predAgent = 1
-           }
-
-           if (prevPlayPositions.length !== 0 && prevAgePositions2.length !== 0) {
-                // predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
-                predAgent2 = curveMatcher.shapeSimilarity(prevAgePositions2, agePositions2)
-            } else {
-                // predPerson = 1
-                predAgent2 = 1
-            }
-
-           if (isNaN(predPerson)) {
-                predPerson = 1
-           }
-
-           if (isNaN(predAgent)) {
-                predAgent = 1
-           }
-
-           if (isNaN(predAgent2)) {
-                predAgent2 = 1
-           }
-
-        //    console.log(`The similarity is: ${similarity} and the distance is: ${distance}`)
-            //console.log(smooth)
-            // console.log(`The similarity with the smooth curve is: ${similaritySmooth} and agent is: ${similaritySmoothAgent}`)
-           socket.emit('scoresSimilar', similarity.toFixed(3) , distance.toFixed(3), predPerson.toFixed(3), predAgent.toFixed(3), similarityNoRot.toFixed(3), dist.toFixed(3))
-           
-           console.log(`The amount of sharp turns for the player is: ${amountSharpTurnsPlayer}, for the wave agent: ${amountSharpTurnsWaves} and the ideal agent: ${amountSharpTurnsIdeal}`)
-           console.log(`The competence in smoothness of the player is: ${competenceSmoothPlayer.toFixed(3)}, for the wave agent: ${competenceSmoothWaveAgent.toFixed(3)} and the ideal agent: ${competenceSmoothnessIdeal.toFixed(3)}`)
-           // WRITE THE JSON FILE
-           let scores = {
-            time: new Date(), 
-            room: room,
-            // score: room_score[room],
-            shapeSimilarityNormRot: similarity.toFixed(3),
-            shapeSimilarityNoRot: similarityNoRot.toFixed(3),
-            predictabilityHuman: predPerson.toFixed(3),
-            predictabilityAgent: predAgent.toFixed(3),
-            competenceSmoothness: competenceSmoothPlayer.toFixed(3),
-            competenceSmoothnessWaves: competenceSmoothWaveAgent.toFixed(3)
-
-           }
-
-           let scores2 = {
-            time: new Date(),
-            room: room,
-            shapeSimilarityNormRot: similarity2.toFixed(3),
-            shapeSImilarityNoRot: similarityNoRot2.toFixed(3),
-            // predictabilityHuman: predPerson.toFixed(3),
-            predictabilityAgent: predAgent2.toFixed(3),
-            competenceSmoothnessIdeal: competenceSmoothnessIdeal.toFixed(3)
-           }
-
-
-           data.resultsAgent1.push(scores)
-           data.resultsAgent2.push(scores2)
-
-           prevPlayPositions = playPositions
-        
-           prevAgePositions = agePositions
-           prevAgePositions2 = agePositions2
-
-           playPositions = []
-           rotDifferencesIdealAgent = []
-           rotDifferencesPlayer = []
-           rotDifferencesWaveAgent = []
-
-           velocityAgentIdeal = []
-           velocityAgentWaves = []
-           velocityPlayer = []
-           
-           agePositions = []
-           agePositions2 = []
-
-           playerPositionsTest = []
-           smoothFinal = []
-           smooth = []
-           smooth2 = []
-           smoothAgentFinal = []
-           amountSharpTurnsIdeal = 0
-           amountSharpTurnsWaves = 0
-           amountSharpTurnsPlayer = 0
-        }
-        
-    })
-
-    // setInterval(() => {
-    //     // console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
-    //     // console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
-    //     // counterTimeTotal ++
-    //     // console.log("The amount of messages is: " + counterTimeTotal)
-    //     socket.to(room).emit('scoresSimilar', room, curveMatcher.shapeSimilarity(agePositions,playPositions), curveMatcher.frechetDistance(agePositions, playPositions) )
-    //     playPositions = []
-    //     agePositions = []
-    //    // console.log(playPositionsPrev)
-    //    // console.log(playPositions)
-       
-    //    // console.log(agePositions)
-    // }, 1000);
-
-    socket.on('location', (room, x, y, rotation, rotationDifference, velocityPlay) => {
-        io.to(room).emit('location', socket.id, x, y, rotation);
+    socket.on('locationPlayer', (room, x, y, rotation, speedX, speedY,
+        accelX, accelY, jerkX, jerkY) => {
+        io.to(room).emit('locationPlayer', socket.id, x, y, rotation);
         // console.log("The position in x is: " + x)
         // console.log(`The registered position in x: ${x} and Position in Y: ${y}`)
-        
+
         if (roundBeginning) {
+            socket.to(room).emit('location', socket.id, x, y)
+            // Positions data structure
+            curvaturePlayer.push(Math.abs((speedX * accelY) - (accelX * speedY)) / (((speedX ** 2) + (speedY ** 2)) ** (3/2)))
             playPositions.push({x: x, y: y})
-            playerPositionsTest.push([x, y])
-            arrayTest.push({x: x*Math.random(), y: y* Math.random()})
-            rotDifferencesPlayer.push(rotationDifference)
-            velocityPlayer.push(velocityPlay)
-            if (Math.abs(rotationDifference) >= 90) {
-                amountSharpTurnsPlayer ++
+            speedXPlayer.push(speedX)
+            speedYPlayer.push(speedY)
+            accelXPlayer.push(accelX)
+            accelYPlayer.push(accelY)
+            jerkXPlayer.push(jerkX)
+            jerkYPlayer.push(jerkY)
+            // Rotation data structure
+            rotationPlayer.push(rotation)
+            if (Math.abs(rotation) >= 90) {
+                amountSharpTurnsAgent ++
             }
+            
+            
+
         }
+
+
+
        
         if(!(room in rooms)) {
             rooms[room] = {};
@@ -512,6 +342,315 @@ io.on('connection', (socket) => {
             db.collection('locations').insert({time: new Date(), room: room, socketId: socket.id, x: x, y: y, rotation: rotation});
         }
     });
+
+    socket.on('calculateMeasuresPlayer', (room) => {
+        if (roundBeginning) {
+
+
+            // let predictabilityPlayerTurns =  amountSharpTurnsPlayer / rotDifferencesPlayer.length
+            
+
+            // WRITE THE JSON FILE
+           let metricsPlayer = {
+            time: new Date(), 
+            room: room,
+            // predictabilityPlayer: predictabilityPlayerTurns,
+            velocityXPlayer: speedXPlayer,
+            velocityYPlayer: speedYPlayer,
+            accelerationXPlayer: accelXPlayer,
+            accelerationYPlayer: accelYPlayer,
+            jerkXPlayer: jerkXPlayer,
+            curvaturePlayer: curvaturePlayer
+           }
+
+           dataPlayer.push(metricsPlayer)
+
+           playPositions = []
+           // rotDifferencesIdealAgent = []
+           rotationPlayer = []
+           speedXPlayer = []
+           speedYPlayer = []
+           accelXPlayer = []
+           accelYPlayer = []
+           jerkXPlayer = []
+           jerkYPlayer = []
+           
+           
+           amountSharpTurnsPlayer = 0
+        }
+            
+        
+    })
+
+    socket.on('calculateMeasuresAgent', (room) => {
+        if (roundBeginning) {
+            let predictabilityAgentTurns = amountSharpTurnsAgent / rotationAgent.length
+
+            // WRITE THE JSON FILE
+           let metricsAgent = {
+            time: new Date(), 
+            room: room,
+            // predictabilityAgent: predictabilityAgentTurns,
+            velocityXAgent: speedXAgent,
+            velocityYAgent: speedYAgent,
+            accelerationXAgent: accelXAgent,
+            accelerationYAgent: accelYAgent,
+            jerkXAgent: jerkXAgent,
+            jerkYAgent: jerkYAgent,
+            curvatureAgent: curvatureAgent
+          }
+
+
+          dataAgent.push(metricsAgent)
+
+
+        agePositions = []
+        predictabilityAgentTurns = []
+        speedXAgent = []
+        speedYAgent = []
+        accelXAgent = []
+        accelYAgent = []
+        jerkXAgent = []
+        jerkYAgent = []
+        curvatureAgent = []
+        
+
+
+          amountSharpTurnsAgent = 0
+
+        }
+    })
+
+    socket.on('calculateMeasures', (room) => {
+        
+        if (roundBeginning) {
+
+            // let pathTest = new paper.Path({
+            //     segments: playPositions
+            // })
+            // let averageDistance= []
+            // let smooth = smoothCurve(playerPositionsTest)
+            // let smooth2 = smoothCurve(agentPositionsTest)
+            // console.log(smooth[10])
+            // console.log(playPositions[10])
+
+            // for (let i = 0; i < smooth.length-1; i++) {
+            //     averageDistance.push([playerPositionsTest[i][0]-smooth[i][0], playerPositionsTest[i][1]-smooth[i][1]])
+            // }
+            // console.log(averageDistance)
+            // console.log(`The length of the playerPositions is: ${playerPositionsTest.length} and the smooth curve is: ${smooth.length} `)
+            // console.log(smooth)
+            // if (!isNaN(playerPositionsTest)) {
+                
+                // console.log(playerPositionsTest[10][0]- smooth[10][0])
+                // console.log(`Player Test position: ${playerPositionsTest[10][0]} and smooth curve: ${smooth[10][0]}`)
+            // }
+
+            // for (let index = 0; index < smooth.length-1; index++) {
+            //     smoothFinal.push({x: smooth[index][0], y: smooth[index][1]})
+            // }
+
+            // for (let index = 0; index < smooth2.length-1; index++) {
+            //     smoothAgentFinal.push({x: smooth2[index][0], y: smooth2[index][1]})
+                
+            // }
+
+            // console.log(`First element of smooth: ${smooth[0]} versus ${smooth[0][0]} and ${smooth[0][1]}`)
+            // console.log(`The difference with first element is: ${playerPositionsTest[10]-playPositions[10]}`)
+            
+            
+            // let balancedCurved1 =curveMatcher.subdivideCurve(agePositions, {numPoints: 50})
+            // let balancedCurved11 = curveMatcher.subdivideCurve(agePositions2, {numPoints: 50})
+
+            // let balancedCurved2 =curveMatcher.subdivideCurve(playPositions, {numPoints: 50})
+
+            // let normalizedCurve1 = curveMatcher.procrustesNormalizeCurve(balancedCurved1)
+            // let normalizedCurve11 = curveMatcher.procrustesNormalizeCurve(balancedCurved11)
+
+            // let normalizedCurve2 = curveMatcher.procrustesNormalizeCurve(balancedCurved2)
+
+            // let dist = curveMatcher.frechetDistance(normalizedCurve1, normalizedCurve2)
+            // let dist2 = curveMatcher.frechetDistance(normalizedCurve11, normalizedCurve2)
+            
+            // let curveLen1 = curveMatcher.curveLength(normalizedCurve1)
+            // let curveLen11 = curveMatcher.curveLength(normalizedCurve11)
+
+            // let curveLen2 = curveMatcher.curveLength(normalizedCurve2)
+
+            // let maxCurveLen = Math.max(curveLen1, curveLen2)
+            // let maxCurveLen2 = Math.max(curveLen11, curveLen2)
+
+            // let similarityNoRot = 1 - dist/ maxCurveLen
+            // let similarityNoRot2 = 1 - dist2/ maxCurveLen2
+
+            // let similarity = curveMatcher.shapeSimilarity(agePositions,playPositions)
+            // let similarity2 = curveMatcher.shapeSimilarity(agePositions2,playPositions)
+
+            // let distance = curveMatcher.frechetDistance(agePositions, playPositions)
+            // let distance2 = curveMatcher.frechetDistance(agePositions2, playPositions)
+
+            // if (isNaN(similarity)) {
+            //     similarity = 1
+            // }
+
+
+            // let balancedCurve1Sm = curveMatcher.subdivideCurve(playPositions, { numPoints: 50 });
+            // let balancedCurve2Sm = curveMatcher.subdivideCurve(smoothFinal, { numPoints: 50 });
+
+            // let normalizedCurve1Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve1Sm);
+            // let normalizedCurve2Sm = curveMatcher.procrustesNormalizeCurve(balancedCurve2Sm);
+
+            // let distSm = curveMatcher.frechetDistance(normalizedCurve1Sm, normalizedCurve2Sm);
+
+            // let curveLen1Sm = curveMatcher.curveLength(normalizedCurve1Sm)
+            // let curveLen2Sm = curveMatcher.curveLength(normalizedCurve2Sm)
+            // let maxCurveLenSm = Math.max(curveLen1Sm, curveLen2Sm);
+
+            // similarity == 1 means the curves have identical shapes
+            // const similaritySm = 1 - distSm / maxCurveLenSm;
+
+            // console.log(`The similarity without rotation is: ${similaritySm} and the distance is: ${distSm}`)
+
+            // let similaritySmooth = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
+            // console.log(similaritySmooth)
+            // if (isNaN(similaritySmooth)) {
+            //     similaritySmooth = 1
+            //     console.log("Entered NAN")
+            // }
+
+            // let similaritySmoothAgent = curveMatcher.shapeSimilarity(smoothFinal,playPositions)
+            // console.log(similaritySmoothAgent)
+            // if (isNaN(similaritySmoothAgent)) {
+            //     similaritySmoothAgent = 1
+            //     console.log("Entered NAN")
+            // }
+
+            // Measure of Sharp Turns Players and Agents
+
+            let predictabilityPlayerTurns =  amountSharpTurnsPlayer / rotDifferencesPlayer.length
+            let predictabilityAgentTurns = amountSharpTurnsAgent / rotationAgent.length
+            
+            // let competenceSmoothnessIdeal = amountSharpTurnsIdeal / rotDifferencesIdealAgent.length
+            
+
+            // let predPerson
+            // let predAgent
+            // let predAgent2
+
+        //     if (prevPlayPositions.length !== 0 && prevAgePositions.length !== 0) {
+        //         predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
+        //         predAgent = curveMatcher.shapeSimilarity(prevAgePositions, agePositions)
+        //    } else {
+        //        predPerson = 1
+        //        predAgent = 1
+        //    }
+
+        //    if (prevPlayPositions.length !== 0 && prevAgePositions2.length !== 0) {
+        //         // predPerson = curveMatcher.shapeSimilarity(prevPlayPositions,playPositions)
+        //         predAgent2 = curveMatcher.shapeSimilarity(prevAgePositions2, agePositions2)
+        //     } else {
+        //         // predPerson = 1
+        //         predAgent2 = 1
+        //     }
+
+        //    if (isNaN(predPerson)) {
+        //         predPerson = 1
+        //    }
+
+        //    if (isNaN(predAgent)) {
+        //         predAgent = 1
+        //    }
+
+        //    if (isNaN(predAgent2)) {
+        //         predAgent2 = 1
+        //    }
+
+        //    console.log(`The similarity is: ${similarity} and the distance is: ${distance}`)
+            //console.log(smooth)
+            // console.log(`The similarity with the smooth curve is: ${similaritySmooth} and agent is: ${similaritySmoothAgent}`)
+           // socket.emit('scoresSimilar', similarity.toFixed(3) , distance.toFixed(3), predPerson.toFixed(3), predAgent.toFixed(3), similarityNoRot.toFixed(3), dist.toFixed(3))
+           socket.emit('scoresSimilar', predictabilityPlayerTurns, predictabilityAgentTurns)
+           // console.log(`The amount of sharp turns for the player is: ${amountSharpTurnsPlayer}, for the wave agent: ${amountSharpTurnsWaves} and the ideal agent: ${amountSharpTurnsIdeal}`)
+           // console.log(`The competence in smoothness of the player is: ${competenceSmoothPlayer.toFixed(3)}, for the wave agent: ${competenceSmoothWaveAgent.toFixed(3)} and the ideal agent: ${competenceSmoothnessIdeal.toFixed(3)}`)
+           // WRITE THE JSON FILE
+           let scores = {
+            time: new Date(), 
+            room: room,
+            // score: room_score[room],
+            // shapeSimilarityNormRot: similarity.toFixed(3),
+            // shapeSimilarityNoRot: similarityNoRot.toFixed(3),
+            // predictabilityHuman: predPerson.toFixed(3),
+            // predictabilityAgent: predAgent.toFixed(3),
+            // competenceSmoothness: competenceSmoothPlayer.toFixed(3),
+            // competenceSmoothnessWaves: competenceSmoothWaveAgent.toFixed(3)
+            predictabilityPlayer: predictabilityPlayerTurns,
+            predictabilityAgent: predictabilityAgentTurns,
+            velocityAgent: speedAgent,
+            jerkAgent: jerkAgent
+           }
+
+        //    let scores2 = {
+        //     time: new Date(),
+        //     room: room,
+        //     shapeSimilarityNormRot: similarity2.toFixed(3),
+        //     shapeSImilarityNoRot: similarityNoRot2.toFixed(3),
+        //     // predictabilityHuman: predPerson.toFixed(3),
+        //     predictabilityAgent: predAgent2.toFixed(3),
+        //     competenceSmoothnessIdeal: competenceSmoothnessIdeal.toFixed(3)
+        //    }
+
+
+           dataAgent.push(scores)
+           // data.resultsAgent2.push(scores2)
+
+           prevPlayPositions = playPositions
+        
+           prevAgePositions = agePositions
+           prevAgePositions2 = agePositions2
+
+           playPositions = []
+           // rotDifferencesIdealAgent = []
+           rotDifferencesPlayer = []
+           rotationAgent = []
+           // rotDifferencesWaveAgent = []
+
+           velocityAgent = []
+           velocityPlayer = []
+
+           speedAgent = []
+           accelAgent = []
+           jerkAgent = []
+           
+           agePositions = []
+           agePositions2 = []
+
+           playerPositionsTest = []
+           smoothFinal = []
+           smooth = []
+           smooth2 = []
+           smoothAgentFinal = []
+           // amountSharpTurnsIdeal = 0
+           amountSharpTurnsAgent = 0
+           amountSharpTurnsPlayer = 0
+        }
+        
+    })
+
+    // setInterval(() => {
+    //     // console.log("The shape similarity (competence) is: " + curveMatcher.shapeSimilarity(agePositions,playPositions))
+    //     // console.log("The frechet distance is: " + curveMatcher.frechetDistance(agePositions, playPositions))
+    //     // counterTimeTotal ++
+    //     // console.log("The amount of messages is: " + counterTimeTotal)
+    //     socket.to(room).emit('scoresSimilar', room, curveMatcher.shapeSimilarity(agePositions,playPositions), curveMatcher.frechetDistance(agePositions, playPositions) )
+    //     playPositions = []
+    //     agePositions = []
+    //    // console.log(playPositionsPrev)
+    //    // console.log(playPositions)
+       
+    //    // console.log(agePositions)
+    // }, 1000);
+
+    
 
 
     socket.on('disconnect', () => {

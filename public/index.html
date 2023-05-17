@@ -7,6 +7,11 @@
 
     <body>
         <div id="start-screen" class="screen" style="display: block;">
+            <h1>Trust and Improvisation in Human-autonomous Teams</h1>
+            <div id="welcome-message">
+                <p>Welcome and thank you for your participation on this experiment. Please click the button down below when you are ready to begin.</p>
+            </div>
+            
             <button id="main-menu-button">Begin</button>
         </div>
 
@@ -69,35 +74,6 @@
             </div>
         </div>
 
-        <!-- <div id="mode-screen" class="screen" style="display: none;">
-            <h1>Please choose the game mode you want to play.</h1>
-            <div class="form-version">
-                <form>
-                <input type="checkbox" name="perfect_mode" id="perfect_mode">
-                <label for="perfect_mode">Perfect Mode</label>
-                <input type="checkbox" name="competence_v1_high_mode" id="competence_v1_high_mode">
-                <label for="competence_v1_high_mode">Activate High Competence Version 1</label>
-                <input type="checkbox" name="competence_v1_low_mode" id="competence_v1_low_mode">
-                <label for="competence_v1_low_mode">Activate Low Competence Version 1</label>
-                <input type="checkbox" name="competence_v2_high_mode" id="competence_v2_high_mode">
-                <label for="competence_v2_high_mode">Activate High Competence Version 2</label>
-                <input type="checkbox" name="competence_v2_low_mode" id="competence_v2_low_mode">
-                <label for="competence_v2_low_mode">Activate Low Competence Version 2</label>
-                <input type="checkbox" name="predictability_v1_high_mode" id="predictability_v1_high_mode">
-                <label for="predictability_v1_high_mode">Activate High Predictability Version 1</label>
-                <input type="checkbox" name="predictability_v1_low_mode" id="predictability_v1_low_mode">
-                <label for="predictability_v1_low_mode">Activate Low Predictability Version 1</label>
-                <input type="checkbox" name="predictability_v2_high_mode" id="predictability_v2_high_mode">
-                <label for="predictability_v2_high_mode">Activate High Predictability Version 2</label>
-                <input type="checkbox" name="predictability_v2_low_mode" id="predictability_v2_low_mode">
-                <label for="predictability_v2_low_mode">Activate Low Predictability Version 2</label>
-                <input type="submit" value="Submit">
-                </form>
-            </div>
-        </div> -->
-
-
-
 
         <div id="general-instructions" class="screen" style="display: none;">
             <h1>General Game Instructions</h1>
@@ -106,8 +82,8 @@
                 The movements simulate dancing and the game is meant to be played using creative movements that are done making new
                 movements that use different trajectories within the game area.
             </p>
-            <p>You will play this game with another participant. There will be a score linked to the use of the space, how much time you synchronize in your team and the average distance
-                between your teammate and you.
+            <p>You will play this game with a teammate. There will be a score linked to how much of the screen you use to create movements,
+                how you and your teammate synchronize and complement each others' movements.
             </p>
         </div>
 
@@ -135,14 +111,21 @@
                 <button id="startNow">START</button>
                 <button id="goBack">BACK</button>
                 <h2 id="objectCoords-HAT">ObjCoord:</h2>
+                <div id="gameExperiment"></div>
                 <canvas id="canvas-demo" style="cursor: none;"></canvas>
             </div>
             <!--<button>Back</button>-->
         </div>
 
         <div id="experiment" class="screen" style="display: none;">
+            <h1>Synchromouse Experiment</h1>
+            <div class="row">
+                <p class="column left">Next round begins in <span id="time">X</span> seconds</p>
+                <p class="column right">Time remaining: <span id="timeRemaining">X</span> seconds</p>
+            </div>
             <canvas id="canvas-game" style="cursor: none;"></canvas>
         </div>
+
 <!--
         <div class="wrapper">
             <div id="game">
@@ -158,7 +141,10 @@
     <script src="/socket.io/socket.io.js"></script>
     <script src="url-search-params.js"></script>
     <script src='http://joeiddon.github.io/perlin/perlin.js'></script>
-    <script src="Classes.js"></script>
+    <!-- <script src="Classes.js"></script> -->
+    <script src="agent.js"></script>
+    <script src="player.js"></script>
+    <script src="Game.js"></script>
     <script src="Functions.js"></script>
     <script src="script.js" type="module"></script>
 </html>

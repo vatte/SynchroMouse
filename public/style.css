@@ -12,6 +12,10 @@ body {
     margin: 0;
 }
 
+#welcome-message {
+  padding: 20px;
+}
+
 #canvas-demo {
     background: #f0f0f0 ;
     border-radius: 5px;
@@ -44,7 +48,6 @@ div#game {
     width: 960px;
     height: 600px;
     transform: scale(1);
-    cursor: none;
     -webkit-transition: background-color 1000ms linear;
     -moz-transition: background-color 1000ms linear;
     -o-transition: background-color 1000ms linear;
